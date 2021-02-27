@@ -37,7 +37,11 @@ connection.once('open', () => {
   const leaderboardChangeStream = connection.collection('scores').watch();
 
   leaderboardChangeStream.on('change', async change => {
-    if (change.operationType === 'update') {
+    console.log(change.operationType);
+    if (
+      change.operationType === 'update' ||
+      change.operationType === 'insert'
+    ) {
       const allScores = await connection.models.Score.aggregate([
         {
           $match: {},

@@ -45,6 +45,22 @@ connection.once('open', () => {
         {
           $sort: { score: -1 },
         },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'users',
+          },
+        },
+        {
+          $addFields: {
+            username: '$users.name',
+          },
+        },
+        {
+          $unwind: '$username',
+        },
       ]);
 
       io.of('/api/socket').emit('newScore', allScores);

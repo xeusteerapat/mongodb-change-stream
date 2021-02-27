@@ -34,6 +34,22 @@ const leaderboard = async (req, res) => {
     {
       $sort: { score: -1 },
     },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'userId',
+        foreignField: '_id',
+        as: 'users',
+      },
+    },
+    {
+      $addFields: {
+        username: '$users.name',
+      },
+    },
+    {
+      $unwind: '$username',
+    },
   ]);
 
   res.send(leaderboards);

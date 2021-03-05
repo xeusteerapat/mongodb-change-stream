@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import socketIOClient from 'socket.io-client';
 import {
@@ -13,17 +13,17 @@ import {
   Heading,
 } from '@chakra-ui/react';
 import dayjs from 'dayjs';
+import Chart from 'react-apexcharts';
 
 function App() {
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [series, setSeries] = useState([]);
+  const [options, setOptions] = useState({});
   const [scores, setScores] = useState([]);
+  const [names, setNames] = useState([]);
 
   useEffect(() => {
     const socket = socketIOClient('http://localhost:5500/api/socket');
-
-    socket.on('newScore', latestScores => {
-      console.log(latestScores);
-      setScores(latestScores);
-    });
 
     const fetchScores = async () => {
       try {
@@ -31,17 +31,47 @@ function App() {
           'http://localhost:5500/api/leaderboard'
         );
 
-        setScores(data);
+        setLeaderboard(data);
+        const newHighestScores = data?.map(score => score?.score);
+        const newLeaderboards = data?.map(score => score?.username);
+
+        setScores([...newHighestScores]);
+        setNames([...newLeaderboards]);
       } catch (error) {
         console.log(error.message);
       }
     };
 
+    socket.on('newScore', latestScores => {
+      setLeaderboard(latestScores);
+      fetchScores();
+    });
+
     fetchScores();
   }, []);
 
-  const fetchLatestScores = () => {
-    if (scores.length === 0) {
+  useEffect(() => {
+    setSeries([
+      ...[
+        {
+          name: 'Score',
+          data: scores,
+        },
+      ],
+    ]);
+
+    setOptions({
+      chart: {
+        id: 'apexchart-example',
+      },
+      xaxis: {
+        categories: names,
+      },
+    });
+  }, [names, scores]);
+
+  const fetchLatestScores = useMemo(() => {
+    if (leaderboard.length === 0) {
       return (
         <>
           <p>Loading...</p>
@@ -66,7 +96,7 @@ function App() {
               </Tr>
             </Thead>
             <Tbody>
-              {scores.map(score => (
+              {leaderboard.map(score => (
                 <Tr key={score._id}>
                   <Td>{score.userId}</Td>
                   <Td>{score.username}</Td>
@@ -76,12 +106,18 @@ function App() {
               ))}
             </Tbody>
           </Table>
+          <Chart
+            options={options}
+            series={[...series]}
+            type='bar'
+            height={350}
+          />
         </Container>
       </Box>
     );
-  };
+  }, [leaderboard, options, series]);
 
-  return fetchLatestScores();
+  return fetchLatestScores;
 }
 
 export default App;
